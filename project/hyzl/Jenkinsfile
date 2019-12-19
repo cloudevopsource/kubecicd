@@ -1,0 +1,607 @@
+//write by orasun@vip.qq.com 2019/11/13 15:39
+pipeline {
+  agent any
+  environment {
+        HARBOR_CREDS = credentials('jenkins-harbor-test-creds')
+        CHARTMUSEUM_CREDS = credentials('chartmuseum-creds')
+        DATE_TAG = sh(returnStdout: true,script: 'date "+%Y%m%d%H%M%S"').trim()
+        PROJECT_NAME = 'hyzl'
+		BUILD_USER=''
+		
+    }
+
+  parameters {
+        string(name: 'PROJECT_NAME', defaultValue: 'hyzl', description: '实施项目名:')
+		string(name: 'HARBOR_HOST', defaultValue: 'harbor.frcloud.io', description: 'harbor仓库地址:')
+        string(name: 'DOCKER_IMAGE', defaultValue: "test/hyzl", description: 'docker镜像名:')
+		
+	}
+  tools {
+     maven 'maven-3.6.2'
+     jdk   'jdk1.8'
+  }
+  
+  
+ stages{
+
+  stage ('进入前进行权限的识别'){
+    steps{
+	  script{
+	     env.BUILD_USER_ID=''
+	     wrap([$class:'BuildUser']){		 
+		 env.BUILD_USER_ID = sh(returnStdout: true,script: 'echo "${BUILD_USER_ID}"|sed s/.*_//g').trim()
+	    }
+		 echo "${env.BUILD_USER_ID}"
+	   }
+	}
+   }
+ 
+   
+  stage('进入开发部署入口') {
+//    when {environment name:'env.BUILD_USER_ID',value:'dev'}
+    when {
+	 expression { return env.BUILD_USER_ID == 'dev'} 
+	 }
+	agent any
+    stages{
+    stage('部署前的询问') {
+	  steps {
+			script {
+				env.deployenv =input (
+					message: "请选择以下的方式进行构建",
+				ok: "Yes",
+				parameters: [
+						choice(description: '',name: 'dev_env_choice',choices: ['maven编译->docker构建->harbor仓库->helm仓库', 'maven编译->docker构建->harbor仓库->helm仓库->开发环境', '根据版本号更新或回滚开发环境'])
+				]
+				)
+
+		} 
+      }
+    }		
+    stage('Maven编译阶段') {
+ 	when {
+	 expression { return env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境'} 
+	 }
+//  when {environment name: "approvalMap['dev_env_choice']",value: "Maven Build&Docker Build&Publish to harbor"}
+//    when {environment name: 'deployenv',value: 'maven编译->docker构建->harbor仓库->helm仓库'}
+
+
+        steps {
+		script{
+		 echo "Build stage: 选中的构建环境为 : $deployenv " 
+		 echo "user: ${env.BUILD_USER_ID}" 
+		 sh "printenv"
+         sh "mvn clean package"
+         
+	}
+	}
+	}
+   
+    stage('Docker构建镜像并推送到Harbor仓库') {
+     when {
+	 expression { return env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境'} 
+	 }
+	  steps {
+          sh "docker login -u ${HARBOR_CREDS_USR} -p ${HARBOR_CREDS_PSW} ${params.HARBOR_HOST}"
+          sh "docker build --build-arg JAR_FILE=`ls target/*.jar |cut -d '/' -f2` -t ${params.HARBOR_HOST}/${params.DOCKER_IMAGE}:${DATE_TAG} ."
+          sh "docker push ${params.HARBOR_HOST}/${params.DOCKER_IMAGE}:${DATE_TAG}"
+          sh "docker rmi ${params.HARBOR_HOST}/${params.DOCKER_IMAGE}:${DATE_TAG}"
+          sh "docker images"
+      }
+    }
+    
+    stage('Chart构建并推送到Helm仓库') {
+	  	when {
+	 expression { return env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境'} 
+	 }
+          steps {
+
+       script {
+          def filename = "chart/${params.PROJECT_NAME}/values.yaml"
+          def data = readYaml file: filename
+          data.image.tag = env.DATE_TAG
+          sh "rm $filename"
+          writeYaml file: filename, data: data
+        }
+
+       script {
+          def filename = "chart/${params.PROJECT_NAME}/Chart.yaml"
+          def data = readYaml file: filename
+          data.version = env.DATE_TAG
+          sh "rm $filename"
+          writeYaml file: filename, data: data
+        }
+      
+           script {
+		   dir('chart') {
+		   
+          sh "/usr/local/bin/helm push ${params.PROJECT_NAME} chartmuseum --username=${CHARTMUSEUM_CREDS_USR} --password=${CHARTMUSEUM_CREDS_PSW}  --version=$DATE_TAG"
+           }
+		  echo "列出最近10个最新的TAG版本号"
+          sh "/usr/local/bin/helm search hyzl -l |awk '{print \$2}'|sed -n '2,11p'"
+		}          
+           
+ 
+      }
+    }
+
+    stage('部署到k8s开发环境') {
+       	when {
+	 expression { return  env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境'} 
+	 }
+      steps {
+          dir("chart/${params.PROJECT_NAME}") {
+            sh "/usr/local/bin/helm upgrade ${params.PROJECT_NAME}-dev --install --namespace=dev --set deploymentenv=dev --set ingress.host=${params.PROJECT_NAME}.dev.frcloud.io ."
+          }
+        
+      }
+    }	 
+		 
+	stage('根据版本号更新或回滚开发环境') {
+       	when {
+	 expression { return  env.deployenv == '根据版本号更新或回滚开发环境'} 
+	 }
+      steps {
+	      script {
+//		  env.top10 = sh(returnStdout: true,script: "/usr/local/bin/helm search hyzl -l |awk '{print \$2}'|sed -n '2,11p'").trim()
+          env.top10 = sh(returnStdout: true,script: "/usr/local/bin/helm history ${params.PROJECT_NAME}-dev |tac |sed -n '1,10p'|awk '{print \$1,\$7,\$8,\$9}'").trim()
+	      env.RELEASE =input (
+					message: "以下显示最近10个版本号:\n\n ${env.top10}",
+					
+				ok: "Deploy",
+				parameters: [
+				  [$class:
+				 'TextParameterDefinition',
+				 defaultValue:'1.0.0',
+				 description:'请输入版本号:',
+				 name:'release']
+				]
+				)
+	      }
+          dir("chart/${params.PROJECT_NAME}") {
+            sh "/usr/local/bin/helm rollback ${params.PROJECT_NAME}-dev ${env.RELEASE}"
+            sh "/usr/local/bin/helm history ${params.PROJECT_NAME}-dev |tac |sed -n '1,10p'|awk '{print \$1,\$7,\$8,\$9}'"
+		  }
+        
+      }
+    }		  
+		 	 
+   } 
+  }
+   
+
+   
+   
+   
+    stage('进入测试部署入口') {
+    when {
+	 expression { return env.BUILD_USER_ID == 'tst'} 
+	 }
+	agent any
+    stages{
+    stage('部署前的询问') {
+	  steps {
+			script {
+				env.deployenv =input (
+					message: "请选择以下的方式进行构建",
+				ok: "Yes",
+				parameters: [
+						choice(description: '',name: 'test_env_choice',choices: ['maven编译->docker构建->harbor仓库->helm仓库', 'maven编译->docker构建->harbor仓库->helm仓库->开发环境','maven编译->docker构建->harbor仓库->helm仓库->测试环境','maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境','根据版本号更新或回滚开发环境','根据版本号更新部署到测试环境'])
+				]
+				)
+
+		} 
+      }
+    }		
+    stage('Maven编译阶段') {
+ 	when {
+	 expression { return env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境' } 
+	 }
+//  when {environment name: "approvalMap['test_env_choice']",value: "Maven Build&Docker Build&Publish to harbor"}
+//    when {environment name: 'deployenv',value: 'maven编译->docker构建->harbor仓库->helm仓库'}
+
+
+        steps {
+		script{
+		 echo "Build stage: 选中的构建环境为 : $deployenv " 
+		 echo "user: ${env.BUILD_USER_ID}" 
+		 sh "printenv"
+         sh "mvn clean package"
+         
+	}
+	}
+	}
+   
+    stage('Docker构建镜像并推送到Harbor仓库') {
+     when {
+	 expression {return env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境' } 
+	 }
+	  steps {
+          sh "docker login -u ${HARBOR_CREDS_USR} -p ${HARBOR_CREDS_PSW} ${params.HARBOR_HOST}"
+          sh "docker build --build-arg JAR_FILE=`ls target/*.jar |cut -d '/' -f2` -t ${params.HARBOR_HOST}/${params.DOCKER_IMAGE}:${DATE_TAG} ."
+          sh "docker push ${params.HARBOR_HOST}/${params.DOCKER_IMAGE}:${DATE_TAG}"
+          sh "docker rmi ${params.HARBOR_HOST}/${params.DOCKER_IMAGE}:${DATE_TAG}"
+          sh "docker images"
+      }
+    }
+    
+    stage('Chart构建并推送到Helm仓库') {
+	  	when {
+	 expression {return env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境' } 
+	 }
+          steps {
+
+       script {
+          def filename = "chart/${params.PROJECT_NAME}/values.yaml"
+          def data = readYaml file: filename
+          data.image.tag = env.DATE_TAG
+          sh "rm $filename"
+          writeYaml file: filename, data: data
+        }
+
+       script {
+          def filename = "chart/${params.PROJECT_NAME}/Chart.yaml"
+          def data = readYaml file: filename
+          data.version = env.DATE_TAG
+          sh "rm $filename"
+          writeYaml file: filename, data: data
+        }
+      
+           script {
+		   dir('chart') {
+		   
+          sh "/usr/local/bin/helm push ${params.PROJECT_NAME} chartmuseum --username=${CHARTMUSEUM_CREDS_USR} --password=${CHARTMUSEUM_CREDS_PSW}  --version=$DATE_TAG"
+           }
+		  echo "列出最近10个最新的TAG版本号"
+          sh "/usr/local/bin/helm search hyzl -l |awk '{print \$2}'|sed -n '2,11p'"
+		}          
+           
+ 
+      }
+    }
+
+    stage('部署到k8s开发环境') {
+       	when {
+	 expression { return  env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境'|| env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境'} 
+	 }
+      steps {
+          dir("chart/${params.PROJECT_NAME}") {
+            sh "/usr/local/bin/helm upgrade ${params.PROJECT_NAME}-dev --install --namespace=dev --set deploymentenv=dev --set ingress.host=${params.PROJECT_NAME}.dev.frcloud.io ."
+          }
+        
+      }
+    }	 
+	
+    stage('部署到k8s测试环境') {
+       	when {
+	 expression { return  env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->测试环境'|| env.deployenv ==  'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境'} 
+	 }
+      steps {
+          dir("chart/${params.PROJECT_NAME}") {
+            sh "/usr/local/bin/helm upgrade ${params.PROJECT_NAME}-test --install --namespace=test --set deploymentenv=test --set ingress.host=${params.PROJECT_NAME}.test.frcloud.io ."
+          }
+        
+      }
+    }
+	
+	
+	stage('根据版本号更新或回滚开发环境') {
+       	when {
+	 expression { return  env.deployenv == '根据版本号更新或回滚开发环境'} 
+	 }
+      steps {
+	      script {
+//		  env.top10 = sh(returnStdout: true,script: "/usr/local/bin/helm search hyzl -l |awk '{print \$2}'|sed -n '2,11p'").trim()
+          env.top10 = sh(returnStdout: true,script: "/usr/local/bin/helm history ${params.PROJECT_NAME}-dev |tac |sed -n '1,10p'|awk '{print \$1,\$7,\$8,\$9}'").trim()
+	      env.RELEASE =input (
+					message: "以下显示最近10个版本号:\n\n ${env.top10}",
+					
+				ok: "Deploy",
+				parameters: [
+				  [$class:
+				 'TextParameterDefinition',
+				 defaultValue:'1.0.0',
+				 description:'请输入版本号:',
+				 name:'release']
+				]
+				)
+	      }
+          dir("chart/${params.PROJECT_NAME}") {
+            sh "/usr/local/bin/helm rollback ${params.PROJECT_NAME}-dev ${env.RELEASE}"
+            sh "/usr/local/bin/helm history ${params.PROJECT_NAME}-dev |tac |sed -n '1,10p'|awk '{print \$1,\$7,\$8,\$9}'"
+		  }
+        
+      }
+    }		  
+		 
+    stage('根据版本号更新部署到测试环境') {
+       	when {
+	 expression { return  env.deployenv == '根据版本号更新部署到测试环境'} 
+	 }
+	     steps {
+
+       script {
+//		  env.top10 = sh(returnStdout: true,script: "/usr/local/bin/helm search hyzl -l |awk '{print \$2}'|sed -n '2,11p'").trim()
+          env.top10 = sh(returnStdout: true,script: "/usr/local/bin/helm history ${params.PROJECT_NAME}-test |tac |sed -n '1,10p'|awk '{print \$1,\$7,\$8,\$9}'").trim()
+	      env.RELEASE =input (
+					message: "以下显示最近10个版本号:\n\n ${env.top10}",
+					
+				ok: "Deploy",
+				parameters: [
+				  [$class:
+				 'TextParameterDefinition',
+				 defaultValue:'1.0.0',
+				 description:'请输入版本号:',
+				 name:'release']
+				]
+				)
+	      
+		  
+		  
+		  
+		  }
+        
+        script{
+	   def filename = "chart/${params.PROJECT_NAME}/values.yaml"
+          def data = readYaml file: filename
+          data.image.tag = env.RELEASE
+          sh "rm $filename"
+          writeYaml file: filename, data: data
+	   
+	   
+	   
+	   }
+	   
+	   
+       script {
+          def filename = "chart/${params.PROJECT_NAME}/Chart.yaml"
+          def data = readYaml file: filename
+          data.version = env.RELEASE
+          sh "rm $filename"
+          writeYaml file: filename, data: data
+        }  
+		
+		script {
+		dir("chart/${params.PROJECT_NAME}") {
+            sh "/usr/local/bin/helm upgrade ${params.PROJECT_NAME}-test --install --namespace=test --set deploymentenv=test --set ingress.host=${params.PROJECT_NAME}.test.frcloud.io ."
+          }
+		
+		}
+		echo "succeess "
+		}
+       
+	   
+		
+		
+		
+		
+		
+	}
+   
+   }	 		 
+  }
+   
+    
+
+ stage('进入生产部署入口') {
+    when {
+	 expression { return env.BUILD_USER_ID == 'prod'} 
+	 }
+	agent any
+    stages{
+    stage('部署前的询问') {
+	  steps {
+			script {
+				env.deployenv =input (
+					message: "请选择以下的方式进行构建",
+				ok: "Yes",
+				parameters: [
+						choice(description: '',name: 'test_env_choice',choices: ['maven编译->docker构建->harbor仓库->helm仓库','maven编译->docker构建->harbor仓库->helm仓库->开发环境','maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境','maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境->生产环境','maven编译->docker构建->harbor仓库->helm仓库->测试环境','maven编译->docker构建->harbor仓库->helm仓库->测试环境->生产环境','maven编译->docker构建->harbor仓库->helm仓库->生产环境','根据版本号部署到开发环境','根据版本号部署到生产环境','根据版本号部署到测试环境','根据版本号回滚开发环境','根据版本号回滚生产环境','根据版本号回滚测试环境'])
+				]
+				)
+
+		} 
+      }
+    }		
+    stage('Maven编译阶段') {
+ 	when {
+	 expression { return env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库' ||env.deployenv=='maven编译->docker构建->harbor仓库->helm仓库->开发环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境->生产环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->测试环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->测试环境->生产环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->生产环境' } 
+	 }
+//  when {environment name: "approvalMap['test_env_choice']",value: "Maven Build&Docker Build&Publish to harbor"}
+//    when {environment name: 'deployenv',value: 'maven编译->docker构建->harbor仓库->helm仓库'}
+
+
+    steps {
+		script{
+		 echo "Build stage: 选中的构建环境为 : $deployenv " 
+		 echo "user: ${env.BUILD_USER_ID}" 
+		 sh "printenv"
+         sh "mvn clean package"
+         
+	}
+	}
+	}
+   
+    stage('Docker构建镜像并推送到Harbor仓库') {
+     when {
+	expression { return env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库' ||env.deployenv=='maven编译->docker构建->harbor仓库->helm仓库->开发环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境->生产环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->测试环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->测试环境->生产环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->生产环境' } 
+	 }
+	  steps {
+          sh "docker login -u ${HARBOR_CREDS_USR} -p ${HARBOR_CREDS_PSW} ${params.HARBOR_HOST}"
+          sh "docker build --build-arg JAR_FILE=`ls target/*.jar |cut -d '/' -f2` -t ${params.HARBOR_HOST}/${params.DOCKER_IMAGE}:${DATE_TAG} ."
+          sh "docker push ${params.HARBOR_HOST}/${params.DOCKER_IMAGE}:${DATE_TAG}"
+          sh "docker rmi ${params.HARBOR_HOST}/${params.DOCKER_IMAGE}:${DATE_TAG}"
+          sh "docker images"
+      }
+    }
+    
+    stage('Chart构建并推送到Helm仓库') {
+	  	when {
+	expression { return env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库' ||env.deployenv=='maven编译->docker构建->harbor仓库->helm仓库->开发环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境->生产环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->测试环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->测试环境->生产环境'||env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->生产环境' } 
+	 }
+          steps {
+
+       script {
+          def filename = "chart/${params.PROJECT_NAME}/values.yaml"
+          def data = readYaml file: filename
+          data.image.tag = env.DATE_TAG
+          sh "rm $filename"
+          writeYaml file: filename, data: data
+        }
+
+       script {
+          def filename = "chart/${params.PROJECT_NAME}/Chart.yaml"
+          def data = readYaml file: filename
+          data.version = env.DATE_TAG
+          sh "rm $filename"
+          writeYaml file: filename, data: data
+        }
+      
+           script {
+		   dir('chart') {
+		   
+          sh "/usr/local/bin/helm push ${params.PROJECT_NAME} chartmuseum --username=${CHARTMUSEUM_CREDS_USR} --password=${CHARTMUSEUM_CREDS_PSW}  --version=$DATE_TAG"
+           }
+		  echo "列出最近10个最新的TAG版本号"
+          sh "/usr/local/bin/helm search hyzl -l |awk '{print \$2}'|sed -n '2,11p'"
+		}          
+           
+ 
+      }
+    }
+
+    stage('部署到k8s开发环境') {
+       	when {
+	 expression { return  env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境'|| env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境'|| env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境->生产环境'} 
+	 }
+      steps {
+          dir("chart/${params.PROJECT_NAME}") {
+            sh "/usr/local/bin/helm upgrade ${params.PROJECT_NAME}-dev --install --namespace=dev --set deploymentenv=dev --set ingress.host=${params.PROJECT_NAME}.dev.frcloud.io ."
+          }
+        
+      }
+    }	 
+	
+    stage('部署到k8s测试环境') {
+       	when {
+	 expression { return  env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->测试环境'|| env.deployenv ==  'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境'|| env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境->生产环境'} 
+	 }
+      steps {
+          dir("chart/${params.PROJECT_NAME}") {
+            sh "/usr/local/bin/helm upgrade ${params.PROJECT_NAME}-test --install --namespace=test --set deploymentenv=test --set ingress.host=${params.PROJECT_NAME}.test.frcloud.io ."
+          }
+        
+      }
+    }
+	
+	stage('部署到k8s生产环境') {
+       	when {
+	 expression { return  env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->生产环境' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->开发环境->测试环境->生产环境' || env.deployenv == 'maven编译->docker构建->harbor仓库->helm仓库->测试环境->生产环境'} 
+	 }
+      steps {
+          dir("chart/${params.PROJECT_NAME}") {
+            sh "/usr/local/bin/helm upgrade ${params.PROJECT_NAME}-test --install --namespace=test --set deploymentenv=test --set ingress.host=${params.PROJECT_NAME}.test.frcloud.io ."
+          }
+        
+      }
+    }
+	
+	
+	
+	
+	stage('根据版本号更新或回滚生产环境') {
+       	when {
+	 expression { return  env.deployenv == '根据版本号更新或回滚生产环境'} 
+	 }
+      steps {
+	      script {
+//		  env.top10 = sh(returnStdout: true,script: "/usr/local/bin/helm search hyzl -l |awk '{print \$2}'|sed -n '2,11p'").trim()
+          env.top10 = sh(returnStdout: true,script: "/usr/local/bin/helm history ${params.PROJECT_NAME}-dev |tac |sed -n '1,10p'|awk '{print \$1,\$7,\$8,\$9}'").trim()
+	      env.RELEASE =input (
+					message: "以下显示最近10个版本号:\n\n ${env.top10}",
+					
+				ok: "Deploy",
+				parameters: [
+				  [$class:
+				 'TextParameterDefinition',
+				 defaultValue:'1.0.0',
+				 description:'请输入版本号:',
+				 name:'release']
+				]
+				)
+	      }
+          dir("chart/${params.PROJECT_NAME}") {
+            sh "/usr/local/bin/helm rollback ${params.PROJECT_NAME}-dev ${env.RELEASE}"
+            sh "/usr/local/bin/helm history ${params.PROJECT_NAME}-dev |tac |sed -n '1,10p'|awk '{print \$1,\$7,\$8,\$9}'"
+		  }
+        
+      }
+    }		  
+		 
+
+
+	//	stage('根据版本号部署到生产环境') {
+ //      	when {
+//	 expression { return  env.deployenv == '根据版本号部署到生产环境'} 
+//	 }
+  //   
+ //   }	
+ //	stage('根据版本号部署到测试环境') {
+ //      	when {
+//	 expression { return  env.deployenv == '根据版本号部署到生产环境'} 
+//	 }
+  //   
+ //   }	
+//
+//	stage('根据版本号部署到开发环境') {
+ //      	when {
+//	 expression { return  env.deployenv == '根据版本号部署到开发环境'} 
+//	 }
+ //    
+ //   }	
+//	
+  //  stage('根据版本号回滚测试环境') {
+  //     	when {
+//	 expression { return  env.deployenv == '根据版本号回滚测试环境'} 
+//	 }
+ //    
+ //   }		  
+//		
+//	stage('根据版本号回滚生产环境') {
+ //      	when {
+//	 expression { return  env.deployenv == '根据版本号回滚生产环境'} 
+//	 }
+//     
+//    }	
+//
+//	stage('根据版本号回滚开发环境') {
+ //      	when {
+//	 expression { return  env.deployenv == '根据版本号回滚开发环境'} 
+//	 }
+ //    
+//    } 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	}
+   }  
+     
+
+ 
+ 
+ 
+ }	
+}
