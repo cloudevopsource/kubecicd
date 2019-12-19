@@ -1,0 +1,28 @@
+replicaCount: 1
+
+deploymentenv: dev
+
+image:
+  repository: harbor.frcloud.io/test/gswz
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  annotations: 
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  path: /
+  host: gswz.frcloud.io
+  tls: []
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
