@@ -4,11 +4,11 @@
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: {{ $fullName }}
+  name: mp-auth-ingress
   labels:
-    app: {{ template "mp-auth.name" . }}
-    chart: {{ template "mp-auth.chart" . }}
-    release: {{ .Release.Name }}
+    app: mp-auth
+    chart: "mp-auth-{{ .Values.global.tag }}" 
+    release: {{ .Values.global.tag }}
     heritage: {{ .Release.Service }}
 {{- with .Values.ingress.annotations }}
   annotations:
@@ -29,6 +29,6 @@ spec:
         paths:
         - path: {{ $ingressPath }}
           backend:
-            serviceName: {{ $fullName }}
-            servicePort: http
+            serviceName: {{ .Values.service.name }}
+            servicePort: {{ .Values.service.port }} 
 {{- end }}

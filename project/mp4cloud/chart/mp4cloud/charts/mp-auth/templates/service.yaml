@@ -10,10 +10,10 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: http
-      protocol: TCP
-      name: http
+    - port: {{ .Values.ports.serviceport }}
+      nodePort: {{ .Values.ports.nodeport }}
+      targetPort: {{ .Values.ports.containerport}}
+      name: api
   selector:
     app: mp-auth
     release: {{ .Values.global.tag }}

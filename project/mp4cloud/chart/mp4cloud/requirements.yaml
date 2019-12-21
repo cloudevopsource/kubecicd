@@ -1,3 +1,7 @@
 dependencies:
 - name: mp-auth
   repository: file://../charts/mp-auth
+- name: mp-gateway
+  repository: file://../charts/mp-gateway
+- name: mp-booking
+  repository: file://../charts/mp-booking
