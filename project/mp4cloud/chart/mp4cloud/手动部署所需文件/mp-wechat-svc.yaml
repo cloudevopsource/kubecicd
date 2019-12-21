@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mp-wechat-svc
+spec:
+  type: NodePort
+  ports:
+  - name: api
+    port: 8081
+    targetPort: 8081
+    nodePort: 38081
+  selector:
+    app: mp-wechat

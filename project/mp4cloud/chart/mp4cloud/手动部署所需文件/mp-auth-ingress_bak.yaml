@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: mp-auth-ingress
+  namespace: mp4cloud
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: auth.mp4cloud.com
+    http:
+      paths:
+      - path:
+        backend:
+          serviceName: mp-auth-svc
+          servicePort: 3000

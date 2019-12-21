@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: nacos-ingress
+  namespace: mp4cloud 
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: / 
+spec:
+  rules:
+  - host: nacos.frcloud.io
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: nacos-headless 
+          servicePort: 8848 

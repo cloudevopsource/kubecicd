@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: redis-alone
+  labels:
+    name: redis-alone
+spec:
+  replicas: 1
+  selector:
+    name: redis-alone
+  template:
+    metadata:
+      labels:
+        name: redis-alone
+    spec:
+      containers:
+      - name: redis
+        image: harbor.frcloud.io/middleware/redis5.0.5:1.0
+        command:
+          - "redis-server"
+        args:
+          - "/etc/redis/redis.conf"
+          - "--protected-mode"
+          - "no"
+        ports:
+            - name: redis
+              containerPort: 6379
+              protocol: "TCP"
+        volumeMounts:
+          - name: "redis-alone-conf"
+            mountPath: "/etc/redis/redis.conf"
+            subPath: redis.conf
+            readOnly: true
+          - name: "redis-data"
+            mountPath: "/var/lib/redis"
+      volumes:
+      - name: "redis-alone-conf"
+        configMap:
+          name: "redis-alone-conf"
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-alone-dynamic-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-alone-svc
+  labels:
+    name: redis-alone
+spec:
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    name: redis-alone

@@ -1,0 +1,26 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: mp-payment-dp
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: mp-payment-rc
+      labels:
+        app: mp-payment
+    spec:
+      containers:
+      - image: harbor.frcloud.io/mp4cloud/mp-payment
+        name: mp-payment
+        env:
+        - name: NACOS_HOST
+          value: "nacos-headless"
+        - name: NACOS_NAMESPACE
+          value: "09c4e3f4-3650-4df4-be01-8d994876fd58"
+        - name: LOGSTASH_HOST
+          value: "172.16.99.187"    
+        - name: SPRING_PROFILES_ACTIVE
+          value: "test" 
+        - name: JAVA_OPTS
+          value: "-Xms512m -Xmx512m"

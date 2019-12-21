@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: mp-gateway-ingress
+  namespace: mp4cloud
+  annotations:
+    nginx.ingress.kubernetes.io/rewite-target: /
+spec:
+  rules:
+  - host: api.mp4cloud.com
+    http:
+      paths:
+      - path:
+        backend:
+          serviceName: mp-gateway-svc
+          servicePort: 9999

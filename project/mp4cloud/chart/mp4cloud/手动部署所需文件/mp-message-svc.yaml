@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mp-message-svc
+spec:
+  clusterIP: None
+  selector:
+    app: mp-message

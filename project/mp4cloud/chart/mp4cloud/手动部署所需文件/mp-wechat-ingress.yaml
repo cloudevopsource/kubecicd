@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: mp-wechat-ingress
+  namespace: mp4cloud
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: wx.mp4cloud.com
+    http:
+      paths:
+      - path:
+        backend:
+          serviceName: mp-wechat-svc
+          servicePort: 8081 

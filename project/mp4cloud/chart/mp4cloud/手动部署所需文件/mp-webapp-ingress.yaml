@@ -1,0 +1,28 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: mp-webapp-ingress
+  namespace: mp4cloud
+  annotations:
+    nginx.ingress.kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewite-target: /
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+             proxy_set_header  X-Real-IP    $remote_addr;
+             proxy_set_header  X-Forwarded-For $proxy_add_x_forwarded_for;
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'Authorization,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range' always;
+                add_header 'Access-Control-Expose-Headers' 'DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range' always;
+                add_header 'Access-Control-Allow-Credentials' 'true' always;
+                proxy_set_header sec-fetch-mode navigate;
+                proxy_set_header sec-fetch-site cross-site;
+spec:
+  rules:
+  - host: www.mp4cloud.com
+    http:
+      paths:
+      - path:
+        backend:
+          serviceName: mp-webapp-svc
+          servicePort: 8080

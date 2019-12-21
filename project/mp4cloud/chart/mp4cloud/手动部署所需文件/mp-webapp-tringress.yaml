@@ -1,0 +1,13 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: mp-webapp-tringress 
+spec:
+  rules:
+  - host: www.mp4cloud.com 
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: mp-webapp-svc 
+          servicePort: 8080 
