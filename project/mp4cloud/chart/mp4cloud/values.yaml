@@ -1,28 +1,3 @@
-replicaCount: 1
-
-deploymentenv: dev
-
-image:
-  repository: harbor.frcloud.io/test/mp4cloud
-  tag: latest
-  pullPolicy: IfNotPresent
-
-service:
-  type: ClusterIP
-  port: 8080
-
-ingress:
-  enabled: true
-  annotations: 
-    nginx.ingress.kubernetes.io/rewrite-target: /
-  path: /
-  host: mp4cloud.frcloud.io
-  tls: []
-
-resources: {}
-
-nodeSelector: {}
-
-tolerations: []
-
-affinity: {}
+global:
+  tag: "20191219085501"
+  deploymentenv: test

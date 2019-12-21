@@ -1,13 +1,13 @@
 {{- if .Values.ingress.enabled -}}
-{{- $fullName := include "chart.fullname" . -}}
+{{- $fullName := include "mp-auth.fullname" . -}}
 {{- $ingressPath := .Values.ingress.path -}}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: {{ $fullName }}
   labels:
-    app: {{ template "chart.name" . }}
-    chart: {{ template "chart.chart" . }}
+    app: {{ template "mp-auth.name" . }}
+    chart: {{ template "mp-auth.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 {{- with .Values.ingress.annotations }}

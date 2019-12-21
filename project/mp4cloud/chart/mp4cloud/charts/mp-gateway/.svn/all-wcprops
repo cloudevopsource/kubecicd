@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/FM-MPORT/!svn/ver/21/branches/mcloud_dev_1203/chart/mp4cloud/charts/mp-auth
+END
+values.yaml
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svn/FM-MPORT/!svn/ver/21/branches/mcloud_dev_1203/chart/mp4cloud/charts/mp-auth/values.yaml
+END
+Chart.yaml
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svn/FM-MPORT/!svn/ver/21/branches/mcloud_dev_1203/chart/mp4cloud/charts/mp-auth/Chart.yaml
+END
+.helmignore
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svn/FM-MPORT/!svn/ver/21/branches/mcloud_dev_1203/chart/mp4cloud/charts/mp-auth/.helmignore
+END
