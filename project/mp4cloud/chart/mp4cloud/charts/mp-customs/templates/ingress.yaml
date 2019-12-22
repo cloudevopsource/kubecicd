@@ -1,0 +1,34 @@
+{{- if .Values.ingress.enabled -}}
+{{- $fullName := include "mp-customs.fullname" . -}}
+{{- $ingressPath := .Values.ingress.path -}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: mp-customs-ingress
+  labels:
+    app: mp-customs
+    chart: "mp-customs-{{ .Values.global.tag }}" 
+    release: {{ .Values.global.tag }}
+    heritage: {{ .Release.Service }}
+{{- with .Values.ingress.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+{{- if .Values.ingress.tls }}
+  tls:
+  {{- range .Values.ingress.tls }}
+    - hosts:
+      - {{.Values.ingress.host}}
+      secretName: {{ .secretName }}
+  {{- end }}
+{{- end }}
+  rules:
+    - host: {{.Values.ingress.host}}
+      http:
+        paths:
+        - path: {{ $ingressPath }}
+          backend:
+            serviceName: {{ .Values.service.name }}
+            servicePort: {{ .Values.ports.serviceport }} 
+{{- end }}

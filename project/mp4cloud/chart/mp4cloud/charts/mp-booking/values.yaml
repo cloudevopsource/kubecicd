@@ -1,14 +1,18 @@
 replicaCount: 1
 
+ports:
+  serviceport: 8092
+  nodeport: 38092
+  containerport: 8092
+  
 image:
-  repository: harbor.frcloud.io/mp4cloud/mp-auth
+  repository: harbor.frcloud.io/mp4cloud/mp-booking
   tag: 20191219085501
   pullPolicy: IfNotPresent
 
 service:
-  name: mp-auth-svc
+  name: mp-booking-svc
   type: NodePort 
-  port: 8092
 
 ingress:
   enabled: true
@@ -21,7 +25,7 @@ ingress:
                  proxy_set_header sec-fetch-site cross-site;
                  add_header 'Access-Control-Allow-Origin' '*' always;
   path: /
-  host: auth.mp4cloud.com
+  host: booking.mp4cloud.com
   tls: []
 
 resources: {}

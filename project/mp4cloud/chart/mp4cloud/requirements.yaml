@@ -5,3 +5,27 @@ dependencies:
   repository: file://../charts/mp-gateway
 - name: mp-booking
   repository: file://../charts/mp-booking
+- name: mp-booking-ev
+  repository: file://../charts/mp-booking-ev
+- name: mp-booking-fr
+  repository: file://../charts/mp-booking-fr
+- name: mp-customs
+  repository: file://../charts/mp-customs
+- name: mp-message
+  repository: file://../charts/mp-message
+- name: mp-monitor
+  repository: file://../charts/mp-monitor
+- name: mp-payment
+  repository: file://../charts/mp-payment
+- name: mp-query
+  repository: file://../charts/mp-query
+- name: mp-schedule
+  repository: file://../charts/mp-schedule
+- name: mp-storage
+  repository: file://../charts/mp-storage
+- name: mp-upms
+  repository: file://../charts/mp-upms
+- name: mp-webapp
+  repository: file://../charts/mp-webapp
+- name: mp-wechat
+  repository: file://../charts/mp-wechat

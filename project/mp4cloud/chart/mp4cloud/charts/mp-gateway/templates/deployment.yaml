@@ -1,23 +1,23 @@
 apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
-  name: mp-auth-dp
+  name: mp-gateway-dp
   labels:
-    app: mp-auth
-    chart: "mp-auth-{{ .Values.global.tag }}" 
+    app: mp-gateway
+    chart: "mp-gateway-{{ .Values.global.tag }}" 
     release: {{ .Values.global.tag }}
     heritage: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
   template:
     metadata:
-      name: mp-auth-rc    
+      name: mp-gateway-rc    
       labels:
-        app: mp-auth
+        app: mp-gateway
         release: {{ .Values.global.tag }}
     spec:
       containers:
-        - name: mp-auth
+        - name: mp-gateway
           image: "{{ .Values.image.repository }}:{{ .Values.global.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
@@ -32,9 +32,8 @@ spec:
           - name: JAVA_OPTS
             value: "-Xms512m -Xmx512m"           
           ports:
-            - name: http
-              containerPort: 3000
-              protocol: TCP
+          - name: tcp
+            containerPort: {{ .Values.ports.containerport }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
     {{- with .Values.nodeSelector }}

@@ -1,0 +1,50 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: mp-wechat-dp
+  labels:
+    app: mp-wechat
+    chart: "mp-wechat-{{ .Values.global.tag }}" 
+    release: {{ .Values.global.tag }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      name: mp-wechat-rc    
+      labels:
+        app: mp-wechat
+        release: {{ .Values.global.tag }}
+    spec:
+      containers:
+        - name: mp-wechat
+          image: "{{ .Values.image.repository }}:{{ .Values.global.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: NACOS_HOST
+            value: "nacos-headless"
+          - name: NACOS_NAMESPACE
+            value: "09c4e3f4-3650-4df4-be01-8d994876fd58"
+          - name: LOGSTASH_HOST
+            value: "172.16.99.187"         
+          - name: SPRING_PROFILES_ACTIVE
+            value: "{{ .Values.global.deploymentenv }}"
+          - name: JAVA_OPTS
+            value: "-Xms512m -Xmx512m"           
+          ports:
+          - name: tcp
+            containerPort: {{ .Values.ports.containerport }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}

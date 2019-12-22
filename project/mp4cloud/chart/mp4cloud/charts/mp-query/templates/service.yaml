@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mp-query-svc
+  labels:
+    app: mp-query
+    chart: "mp-query-{{ .Values.global.tag }}" 
+    release: {{ .Values.global.tag }}
+    heritage: {{ .Release.Service }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.ports.serviceport }}
+      nodePort: {{ .Values.ports.nodeport }}
+      targetPort: {{ .Values.ports.containerport}}
+      name: api
+  selector:
+    app: mp-query
+    release: {{ .Values.global.tag }}

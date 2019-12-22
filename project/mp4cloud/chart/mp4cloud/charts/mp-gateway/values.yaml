@@ -1,5 +1,10 @@
 replicaCount: 1
 
+ports:
+  serviceport: 9999
+  nodeport: 39999
+  containerport: 9999
+  
 image:
   repository: harbor.frcloud.io/mp4cloud/mp-gateway
   tag: 20191219085501
@@ -7,8 +12,7 @@ image:
 
 service:
   name: mp-gateway-svc
-  type: ClusterIP
-  port: 3000
+  type: NodePort 
 
 ingress:
   enabled: true
@@ -21,7 +25,7 @@ ingress:
                  proxy_set_header sec-fetch-site cross-site;
                  add_header 'Access-Control-Allow-Origin' '*' always;
   path: /
-  host: api.mp4cloud.com
+  host: gateway.mp4cloud.com
   tls: []
 
 resources: {}

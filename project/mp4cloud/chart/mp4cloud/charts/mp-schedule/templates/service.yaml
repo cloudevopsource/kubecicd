@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mp-schedule-svc
+  labels:
+    app: mp-schedule
+    chart: "mp-schedule-{{ .Values.global.tag }}" 
+    release: {{ .Values.global.tag }}
+    heritage: {{ .Release.Service }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.ports.serviceport }}
+      nodePort: {{ .Values.ports.nodeport }}
+      targetPort: {{ .Values.ports.containerport}}
+      name: api
+  selector:
+    app: mp-schedule
+    release: {{ .Values.global.tag }}

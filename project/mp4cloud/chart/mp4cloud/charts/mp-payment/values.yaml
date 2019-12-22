@@ -1,0 +1,37 @@
+replicaCount: 1
+
+ports:
+  serviceport: 8099
+  nodeport: 38099
+  containerport: 8099
+  
+image:
+  repository: harbor.frcloud.io/mp4cloud/mp-payment
+  tag: 20191219085501
+  pullPolicy: IfNotPresent
+
+service:
+  name: mp-payment-svc
+  type: NodePort 
+
+ingress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+                 proxy_set_header  X-Real-IP    $remote_addr;
+                 proxy_set_header  X-Forwarded-For $proxy_add_x_forwarded_for;
+                 proxy_set_header sec-fetch-site cross-site;
+                 add_header 'Access-Control-Allow-Origin' '*' always;
+  path: /
+  host: payment.mp4cloud.com
+  tls: []
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

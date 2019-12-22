@@ -1,13 +1,13 @@
 {{- if .Values.ingress.enabled -}}
-{{- $fullName := include "mp-auth.fullname" . -}}
+{{- $fullName := include "mp-booking.fullname" . -}}
 {{- $ingressPath := .Values.ingress.path -}}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: mp-auth-ingress
+  name: mp-booking-ingress
   labels:
-    app: mp-auth
-    chart: "mp-auth-{{ .Values.global.tag }}" 
+    app: mp-booking
+    chart: "mp-booking-{{ .Values.global.tag }}" 
     release: {{ .Values.global.tag }}
     heritage: {{ .Release.Service }}
 {{- with .Values.ingress.annotations }}
@@ -30,5 +30,5 @@ spec:
         - path: {{ $ingressPath }}
           backend:
             serviceName: {{ .Values.service.name }}
-            servicePort: {{ .Values.service.port }} 
+            servicePort: {{ .Values.ports.serviceport }} 
 {{- end }}
