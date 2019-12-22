@@ -32,10 +32,8 @@ spec:
           - name: JAVA_OPTS
             value: "-Xms512m -Xmx512m"           
           ports:
-            - port: {{ .Values.ports.serviceport }}
-              nodePort: {{ .Values.ports.nodeport }}
-              targetPort: {{ .Values.ports.containerport}}
-              name: api
+          - name: tcp
+            containerPort: {{ .Values.ports.containerport }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
     {{- with .Values.nodeSelector }}
