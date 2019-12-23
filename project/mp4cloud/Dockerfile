@@ -84,7 +84,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-edi
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -99,7 +99,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-edo
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -114,7 +114,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-gateway
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -129,7 +129,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-message
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -144,7 +144,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-monitor
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -159,7 +159,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-payment
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -174,7 +174,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-query
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -189,7 +189,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-booking
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -204,7 +204,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-storage
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -219,7 +219,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-mp-tug
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -234,7 +234,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-mp-upms
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -249,7 +249,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-webapp
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
@@ -264,7 +264,7 @@ ARG BUILD_NAME
 #设置时区
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
-WORKDIR /home/mp4cloud/mp-customs
+WORKDIR /home/mp4cloud/mp-wechat
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
