@@ -13,6 +13,22 @@ ADD $BUILD_NAME ./app.jar
 #启动命令
 CMD java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -Xshareclasses -Xquickstart -jar app.jar
 
+FROM harbor.frcloud.io/mp4cloud/openjdk8-openj9:alpine-slim AS mp-booking
+MAINTAINER fzpu0591@fastrise.net
+EXPOSE 8092
+ARG BUILD_NAME
+#环境变量
+#ENV BUILD_NAME @project.build.finalName@
+#设置时区
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+# WORKDIR
+WORKDIR /home/mp4cloud/mp-booking
+#ADD
+ADD $BUILD_NAME ./app.jar
+#启动命令
+CMD java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -Xshareclasses -Xquickstart -jar app.jar
+
+
 FROM harbor.frcloud.io/mp4cloud/openjdk8-openj9:alpine-slim AS mp-booking-ev
 MAINTAINER fzpu0591@fastrise.net
 EXPOSE 8093
@@ -175,21 +191,6 @@ ARG BUILD_NAME
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 # WORKDIR
 WORKDIR /home/mp4cloud/mp-query
-#ADD
-ADD $BUILD_NAME ./app.jar
-#启动命令
-CMD java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -Xshareclasses -Xquickstart -jar app.jar
-
-FROM harbor.frcloud.io/mp4cloud/openjdk8-openj9:alpine-slim AS mp-booking
-MAINTAINER fzpu0591@fastrise.net
-EXPOSE 8092
-ARG BUILD_NAME
-#环境变量
-#ENV BUILD_NAME @project.build.finalName@
-#设置时区
-RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-# WORKDIR
-WORKDIR /home/mp4cloud/mp-booking
 #ADD
 ADD $BUILD_NAME ./app.jar
 #启动命令
